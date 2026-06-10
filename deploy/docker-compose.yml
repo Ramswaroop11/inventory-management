@@ -17,15 +17,21 @@ services:
     networks:
       - inventory-network
 
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-proot123"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+
   inventory-app:
     image: ${IMAGE_URI}
-
     container_name: inventory-app
-
     restart: always
 
     depends_on:
-      - mysql
+      mysql:
+        condition: service_healthy
 
     ports:
       - "8080:8080"
@@ -37,6 +43,7 @@ services:
 
     networks:
       - inventory-network
+
 
 volumes:
   mysql_data:
