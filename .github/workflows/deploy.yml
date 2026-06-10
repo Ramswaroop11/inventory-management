@@ -7,14 +7,12 @@ on:
 
 jobs:
   deploy:
-
     runs-on: ubuntu-latest
 
     permissions:
       contents: read
 
     steps:
-
       - name: Checkout Source
         uses: actions/checkout@v4
 
@@ -25,9 +23,11 @@ jobs:
           java-version: 21
 
       - name: Run Tests
+        working-directory: inventory-management
         run: mvn test
 
       - name: Build Jar
+        working-directory: inventory-management
         run: mvn clean package -DskipTests
 
       - name: Configure AWS Credentials
@@ -43,6 +43,10 @@ jobs:
       - name: Terraform Init
         working-directory: terraform
         run: terraform init
+
+      - name: Terraform Validate
+        working-directory: terraform
+        run: terraform validate
 
       - name: Terraform Apply
         working-directory: terraform
@@ -87,7 +91,10 @@ jobs:
 
       - name: Build Docker Image
         run: |
-          docker build -t inventory-management .
+          docker build \
+            -t inventory-management \
+            -f inventory-management/Dockerfile \
+            inventory-management
 
       - name: Tag Docker Image
         run: |
@@ -104,32 +111,32 @@ jobs:
           sed "s|\${IMAGE_URI}|${{ steps.tf.outputs.ecr_url }}:latest|g" \
           deploy/docker-compose.yml > docker-compose-final.yml
 
-      - name: Upload Compose To SSM
+      - name: Upload Compose File
         run: |
           CONTENT=$(base64 -w 0 docker-compose-final.yml)
 
           aws ssm send-command \
-          --instance-ids ${{ steps.tf.outputs.instance_id }} \
-          --document-name AWS-RunShellScript \
-          --parameters "commands=[
-          'mkdir -p /opt/inventory',
-          'echo $CONTENT | base64 -d > /opt/inventory/docker-compose.yml'
-          ]"
+            --instance-ids ${{ steps.tf.outputs.instance_id }} \
+            --document-name AWS-RunShellScript \
+            --parameters "commands=[
+            'mkdir -p /opt/inventory',
+            'echo $CONTENT | base64 -d > /opt/inventory/docker-compose.yml'
+            ]"
 
       - name: Deploy Application
         run: |
           aws ssm send-command \
-          --instance-ids ${{ steps.tf.outputs.instance_id }} \
-          --document-name AWS-RunShellScript \
-          --parameters "commands=[
-          'aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin ${{ steps.tf.outputs.ecr_url }}',
-          'cd /opt/inventory',
-          'docker compose down || true',
-          'docker compose pull',
-          'docker compose up -d'
-          ]"
+            --instance-ids ${{ steps.tf.outputs.instance_id }} \
+            --document-name AWS-RunShellScript \
+            --parameters "commands=[
+            'aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin ${{ steps.tf.outputs.ecr_url }}',
+            'cd /opt/inventory',
+            'docker compose down || true',
+            'docker compose pull',
+            'docker compose up -d'
+            ]"
 
-      - name: Show Public URL
+      - name: Show Application URL
         run: |
           echo "Application URL:"
           echo "http://${{ steps.tf.outputs.public_ip }}:8080"
