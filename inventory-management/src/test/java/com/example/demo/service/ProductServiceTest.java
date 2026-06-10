@@ -10,8 +10,7 @@ import com.example.demo.repository.ProductRepository;
 import com.example.demo.services.ProductService;
 import static org.mockito.Mockito.*;
 import static org.junit.jupiter.api.Assertions.*;
-import org.springframework.test.context.ActiveProfiles;
-@ActiveProfiles("test")
+
 @ExtendWith(MockitoExtension.class)
 class ProductServiceTest {
 

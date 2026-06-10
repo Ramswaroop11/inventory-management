@@ -22,10 +22,6 @@ jobs:
           distribution: temurin
           java-version: 21
 
-      - name: Run Tests
-        working-directory: inventory-management
-        run: mvn test -DskipTests
-
       - name: Build Jar
         working-directory: inventory-management
         run: mvn clean package -DskipTests
