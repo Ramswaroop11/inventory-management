@@ -6,7 +6,8 @@ import org.junit.jupiter.api.Test;
 import java.util.Set;
 import jakarta.validation.ConstraintViolation;
 import static org.junit.jupiter.api.Assertions.*;
-
+import org.springframework.test.context.ActiveProfiles;
+@ActiveProfiles("test")
 class ProductValidationTest {
 
     private final Validator validator =
