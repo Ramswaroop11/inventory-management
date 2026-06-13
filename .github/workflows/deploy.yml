@@ -51,7 +51,7 @@ jobs:
       - name: Clean Existing Resources
         run: |
           set +e  # Don't fail on errors
-          echo "🗑️ Deleting all conflicting resources..."
+          echo "🗑️ Deleting conflicting resources..."
 
           # Delete EC2 Instance first (if exists)
           echo "Terminating EC2 instances..."
@@ -72,38 +72,15 @@ jobs:
           echo "Deleting ECR repository..."
           aws ecr delete-repository --repository-name inventory-management --force --region ap-south-1 2>&1 | head -1
 
-          # Delete IAM Instance Profile
-          echo "Deleting IAM Instance Profile..."
-          aws iam delete-instance-profile --instance-profile-name inventory-profile 2>&1 | head -1
-
-          # Detach ALL policies from IAM Role (not just the ones we know about)
-          echo "Detaching all IAM role policies..."
-          POLICIES=$(aws iam list-attached-role-policies --role-name inventory-ec2-role --query 'AttachedPolicies[*].PolicyArn' --output text 2>/dev/null)
-          for POLICY in $POLICIES; do
-            echo "  Detaching: $POLICY"
-            aws iam detach-role-policy --role-name inventory-ec2-role --policy-arn "$POLICY" 2>&1 | head -1
-          done
-
-          # Delete inline policies too
-          INLINE_POLICIES=$(aws iam list-role-policies --role-name inventory-ec2-role --query 'PolicyNames[*]' --output text 2>/dev/null)
-          for POLICY in $INLINE_POLICIES; do
-            echo "  Deleting inline policy: $POLICY"
-            aws iam delete-role-policy --role-name inventory-ec2-role --policy-name "$POLICY" 2>&1 | head -1
-          done
-
-          # Finally delete the role
-          echo "Deleting IAM Role..."
-          aws iam delete-role --role-name inventory-ec2-role 2>&1 | head -1
-
           # Wait for AWS to process deletions
-          echo "⏳ Waiting 10 seconds for AWS to process deletions..."
-          sleep 10
+          echo "⏳ Waiting 5 seconds for AWS to process deletions..."
+          sleep 5
 
-          echo "✅ Cleanup complete"
+          echo "✅ Cleanup complete (IAM role will be replaced by Terraform)"
 
       - name: Terraform Apply
         working-directory: terraform
-        run: terraform apply -auto-approve
+        run: terraform apply -auto-approve -replace=aws_iam_role.inventory_ec2_role
         continue-on-error: true
 
       - name: Retry Terraform Apply
