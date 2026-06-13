@@ -24,12 +24,21 @@ resource "aws_instance" "inventory" {
     aws_security_group.inventory.id
   ]
 
+  root_block_device {
+    volume_size = 30
+    volume_type = "gp3"
+  }
+
   user_data = <<-EOF
 #!/bin/bash
 
 dnf update -y
 
 dnf install -y amazon-ssm-agent docker
+
+growpart /dev/xvda 1 || true
+xfs_growfs -d / || true
+resize2fs /dev/xvda1 || true
 
 systemctl enable --now amazon-ssm-agent
 systemctl enable --now docker

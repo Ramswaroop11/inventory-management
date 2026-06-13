@@ -177,9 +177,12 @@ jobs:
             'aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin ${{ steps.tf.outputs.ecr_url }}',
             'cd /opt/inventory',
             'docker compose down || true',
+            'docker system prune -af || true',
+            'df -h',
             'docker compose pull',
             'docker compose up -d',
             'docker compose ps',
+            'df -h',
             'sleep 10',
             'docker logs --tail 100 inventory-app',
             'curl -fsS http://localhost:8080/products'
