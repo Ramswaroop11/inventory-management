@@ -12,7 +12,7 @@ data "aws_ami" "amazon_linux" {
 
 resource "aws_instance" "inventory" {
 
-  ami           = data.aws_ami.amazon_linux.id
+  ami = data.aws_ami.amazon_linux.id
 
   instance_type = "t3.small"
 
@@ -29,23 +29,29 @@ resource "aws_instance" "inventory" {
 
 dnf update -y
 
-dnf install docker -y
+dnf install -y amazon-ssm-agent docker
 
-systemctl enable docker
-
-systemctl start docker
+systemctl enable --now amazon-ssm-agent
+systemctl enable --now docker
 
 usermod -aG docker ec2-user
 
-curl -SL https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64 \
--o /usr/local/bin/docker-compose
+mkdir -p /usr/local/lib/docker/cli-plugins
 
-chmod +x /usr/local/bin/docker-compose
+curl -SL https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64 \
+-o /usr/local/lib/docker/cli-plugins/docker-compose
+
+chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
 
 docker --version
 
-docker-compose --version
+docker compose version
 EOF
+
+  depends_on = [
+    aws_iam_role_policy_attachment.ssm,
+    aws_iam_role_policy_attachment.ecr
+  ]
 
   tags = {
     Name = "inventory-management"
