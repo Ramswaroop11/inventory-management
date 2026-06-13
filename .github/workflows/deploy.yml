@@ -50,16 +50,10 @@ jobs:
 
       - name: Clean Existing Resources
         run: |
-          echo "Cleaning up conflicting resources..."
+          echo "Cleaning up conflicting ECR repository if it exists..."
 
-          # Delete ECR if exists
+          # Delete ECR if exists (you already deleted it, but keep for safety)
           aws ecr delete-repository --repository-name inventory-management --force --region ap-south-1 2>/dev/null || echo "ECR repo not found (OK)"
-
-          # Detach and delete IAM role
-          aws iam detach-role-policy --role-name inventory-ec2-role --policy-arn arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore 2>/dev/null || true
-          aws iam detach-role-policy --role-name inventory-ec2-role --policy-arn arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly 2>/dev/null || true
-          aws iam delete-instance-profile --instance-profile-name inventory-profile 2>/dev/null || true
-          aws iam delete-role --role-name inventory-ec2-role 2>/dev/null || echo "IAM role not found (OK)"
 
           echo "Cleanup done"
 
