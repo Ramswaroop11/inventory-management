@@ -22,6 +22,11 @@ public class ProductController {
         this.service = service;
     }
 
+    @GetMapping("/")
+    public String home() {
+        return "redirect:/products";
+    }
+
     @GetMapping("/products")
     public String getProducts(Model model) {
 
