@@ -50,12 +50,37 @@ jobs:
 
       - name: Clean Existing Resources
         run: |
-          echo "Cleaning up conflicting ECR repository if it exists..."
+          set +e  # Don't fail on errors
+          echo "🗑️ Deleting all conflicting resources..."
 
-          # Delete ECR if exists (you already deleted it, but keep for safety)
-          aws ecr delete-repository --repository-name inventory-management --force --region ap-south-1 2>/dev/null || echo "ECR repo not found (OK)"
+          # Delete ECR
+          echo "Deleting ECR repository..."
+          aws ecr delete-repository --repository-name inventory-management --force --region ap-south-1 2>&1 | grep -v "not found" || true
 
-          echo "Cleanup done"
+          # Delete Security Group
+          echo "Deleting Security Group..."
+          SG_ID=$(aws ec2 describe-security-groups --filters "Name=group-name,Values=inventory-sg" --query 'SecurityGroups[0].GroupId' --output text --region ap-south-1 2>/dev/null)
+          if [ ! -z "$SG_ID" ] && [ "$SG_ID" != "None" ]; then
+            aws ec2 delete-security-group --group-id "$SG_ID" --region ap-south-1 2>&1 | grep -v "not found" || true
+          fi
+
+          # Delete IAM Instance Profile
+          echo "Deleting IAM Instance Profile..."
+          aws iam delete-instance-profile --instance-profile-name inventory-profile 2>&1 | grep -v "not found" || true
+
+          # Detach and delete IAM Role
+          echo "Deleting IAM Role policies..."
+          aws iam detach-role-policy --role-name inventory-ec2-role --policy-arn arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore 2>&1 | grep -v "not found" || true
+          aws iam detach-role-policy --role-name inventory-ec2-role --policy-arn arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly 2>&1 | grep -v "not found" || true
+
+          echo "Deleting IAM Role..."
+          aws iam delete-role --role-name inventory-ec2-role 2>&1 | grep -v "not found" || true
+
+          # Wait for deletions to complete
+          echo "⏳ Waiting 5 seconds for AWS to process deletions..."
+          sleep 5
+
+          echo "✅ Cleanup complete"
 
       - name: Terraform Apply
         working-directory: terraform
