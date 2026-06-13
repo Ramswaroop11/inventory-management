@@ -48,7 +48,27 @@ jobs:
         working-directory: terraform
         run: terraform validate
 
+      - name: Clean Existing Resources
+        run: |
+          echo "Cleaning up conflicting resources..."
+
+          # Delete ECR if exists
+          aws ecr delete-repository --repository-name inventory-management --force --region ap-south-1 2>/dev/null || echo "ECR repo not found (OK)"
+
+          # Detach and delete IAM role
+          aws iam detach-role-policy --role-name inventory-ec2-role --policy-arn arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore 2>/dev/null || true
+          aws iam detach-role-policy --role-name inventory-ec2-role --policy-arn arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly 2>/dev/null || true
+          aws iam delete-instance-profile --instance-profile-name inventory-profile 2>/dev/null || true
+          aws iam delete-role --role-name inventory-ec2-role 2>/dev/null || echo "IAM role not found (OK)"
+
+          echo "Cleanup done"
+
       - name: Terraform Apply
+        working-directory: terraform
+        run: terraform apply -auto-approve
+        continue-on-error: true
+
+      - name: Retry Terraform Apply
         working-directory: terraform
         run: terraform apply -auto-approve
 
