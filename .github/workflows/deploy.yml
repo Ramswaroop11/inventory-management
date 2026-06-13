@@ -102,7 +102,7 @@ jobs:
 
       - name: Wait For SSM Registration
         run: |
-          for i in {1..30}
+          for i in {1..90}
           do
             STATUS=$(aws ssm describe-instance-information \
               --filters "Key=InstanceIds,Values=${{ steps.tf.outputs.instance_id }}" \
@@ -110,15 +110,15 @@ jobs:
               --output text 2>/dev/null || true)
 
             if [ "$STATUS" = "Online" ]; then
-              echo "SSM Online"
+              echo "✅ SSM Online"
               exit 0
             fi
 
-            echo "Waiting for SSM..."
-            sleep 20
+            echo "⏳ Waiting for SSM... ($i/90 - $(($i * 10)) seconds elapsed)"
+            sleep 10
           done
 
-          echo "SSM registration timeout"
+          echo "❌ SSM registration timeout after 15 minutes"
           exit 1
 
       - name: Login To ECR
