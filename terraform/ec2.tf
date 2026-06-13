@@ -34,11 +34,14 @@ resource "aws_instance" "inventory" {
 
 dnf update -y
 
-dnf install -y amazon-ssm-agent docker
+dnf install -y amazon-ssm-agent cloud-utils-growpart docker
 
-growpart /dev/xvda 1 || true
+ROOT_SOURCE=$(findmnt -n -o SOURCE /)
+ROOT_DISK="/dev/$(lsblk -no PKNAME "$ROOT_SOURCE")"
+ROOT_PART=$(lsblk -no PARTNUM "$ROOT_SOURCE")
+growpart "$ROOT_DISK" "$ROOT_PART" || true
 xfs_growfs -d / || true
-resize2fs /dev/xvda1 || true
+resize2fs "$ROOT_SOURCE" || true
 
 systemctl enable --now amazon-ssm-agent
 systemctl enable --now docker
