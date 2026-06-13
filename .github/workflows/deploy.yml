@@ -48,38 +48,6 @@ jobs:
         working-directory: terraform
         run: terraform validate
 
-      - name: Import Existing Resources
-        working-directory: terraform
-        run: |
-          echo "Attempting to import existing AWS resources..."
-
-          # Import ECR repository
-          terraform import -auto-approve aws_ecr_repository.inventory inventory-management 2>/dev/null || echo "ECR already managed by Terraform"
-
-          # Import IAM role
-          terraform import -auto-approve aws_iam_role.inventory_ec2_role inventory-ec2-role 2>/dev/null || echo "IAM role already managed by Terraform"
-
-          # Import IAM instance profile
-          terraform import -auto-approve aws_iam_instance_profile.inventory_profile inventory-profile 2>/dev/null || echo "Instance profile already managed by Terraform"
-
-          # Import IAM policy attachments
-          terraform import -auto-approve "aws_iam_role_policy_attachment.ssm" "inventory-ec2-role/arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore" 2>/dev/null || echo "SSM policy already managed by Terraform"
-          terraform import -auto-approve "aws_iam_role_policy_attachment.ecr" "inventory-ec2-role/arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly" 2>/dev/null || echo "ECR policy already managed by Terraform"
-
-          # Import security group
-          SG_ID=$(aws ec2 describe-security-groups --filters "Name=group-name,Values=inventory-sg" --query 'SecurityGroups[0].GroupId' --output text 2>/dev/null || echo "")
-          if [ ! -z "$SG_ID" ]; then
-            terraform import -auto-approve aws_security_group.inventory "$SG_ID" 2>/dev/null || echo "Security group already managed by Terraform"
-          fi
-
-          # Import EC2 instance
-          INSTANCE_ID=$(aws ec2 describe-instances --filters "Name=tag:Name,Values=inventory-management" "Name=instance-state-name,Values=running" --query 'Reservations[0].Instances[0].InstanceId' --output text 2>/dev/null || echo "")
-          if [ ! -z "$INSTANCE_ID" ] && [ "$INSTANCE_ID" != "None" ]; then
-            terraform import -auto-approve aws_instance.inventory "$INSTANCE_ID" 2>/dev/null || echo "EC2 instance already managed by Terraform"
-          fi
-
-          echo "Import attempt completed"
-
       - name: Terraform Apply
         working-directory: terraform
         run: terraform apply -auto-approve
