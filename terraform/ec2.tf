@@ -14,7 +14,7 @@ resource "aws_instance" "inventory" {
 
   ami           = data.aws_ami.amazon_linux.id
 
-  instance_type = "t3.micro"
+  instance_type = "t3.small"
 
   associate_public_ip_address = true
 
